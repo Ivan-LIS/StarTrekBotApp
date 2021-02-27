@@ -38,6 +38,37 @@ bool isImageFound(Mat src, Mat SearchImg)
     return false;
 }
 
+HWND WindowHandle;
+//ищем окно MEmu
+BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+{
+    char ClName[50];
+    GetWindowTextA(hwnd, ClName, sizeof(ClName));
+    if (strcmp(ClName,"MEmu")==0)
+    {
+        long Style;
+        Style = GetWindowLong(hwnd, GWL_STYLE); 
+        if (WS_VISIBLE & Style)
+        {
+            WindowHandle = hwnd;
+            return FALSE;
+        }
+    }
+    return true;
+}
+
+void MouseClick(HWND hwnd1)
+{
+    printf("Click HWND %i \n", LONG(hwnd1));
+
+    SendMessage(hwnd1, WM_LBUTTONDOWN, 0, ((300) << 16) | (300));
+    Sleep(100);
+    
+    SendMessage(hwnd1, WM_LBUTTONUP, 0, ((300) << 16) | 300);
+    Sleep(100);
+
+}
+
 int main()
 {
 
@@ -65,11 +96,47 @@ int main()
     namedWindow("Display window", WINDOW_AUTOSIZE); // Create a window for display.
     //imshow("Display window", image); // Show our image inside it.
 
-    HWND hw = FindWindow(NULL, TEXT("BlueStacks"));
-    HWND hwGame = FindWindowEx(hw, NULL, NULL, NULL);
-    int err = GetLastError();
+    //HWND hw = FindWindow(NULL, TEXT("BlueStacks"));
+    //HWND hwGame = FindWindowEx(hw, NULL, NULL, NULL);
+    WindowHandle = NULL;
+    EnumWindows(EnumWindowsProc, NULL);
+    HWND hw = FindWindow(NULL, TEXT("MEmu"));
+    
+    while ( WindowHandle == NULL)
+    {
+        Sleep(10);
+    }
+    hw = WindowHandle;
+    MouseClick(hw);
     RECT windowsize;    // get the height and width of the screen
     GetClientRect(hw, &windowsize);
+    HWND hwGame = FindWindowEx(hw, NULL, NULL, TEXT("MainWindowWindow"));
+    MouseClick(hwGame);
+    hwGame = FindWindowEx(hwGame, NULL, NULL, TEXT("CenterWidgetWindow"));
+    MouseClick(hwGame);
+    hwGame = FindWindowEx(hwGame, NULL, NULL, TEXT("RenderWindowWindow"));
+    MouseClick(hwGame);
+    hwGame = FindWindowEx(hwGame, NULL, NULL, TEXT("sub"));
+    MouseClick(hwGame);
+    hwGame = FindWindowEx(hwGame, NULL, NULL, TEXT("sub"));
+    MouseClick(hwGame);
+    //debug
+  /*  int krrr = 0;
+    while (krrr != 27)
+    {
+        Mat tmpDebag = hwnd2mat(hw);
+        imshow("Display window", tmpDebag);
+        int krrr = waitKey(15);
+    };*/
+   
+    //Sleep(10000);
+    //end debug
+    
+    
+   // hwGame = hw;
+    
+    int err = GetLastError();
+
 
     Mat ftmp;
     ftmp.create(windowsize.bottom + 1 - image.rows, windowsize.right + 1 - image.cols, CV_8UC4);
@@ -278,10 +345,31 @@ int main()
         rectangle(MainSc.GetSrcMain(), myROIShipsCoord, Scalar(0, 255, 255), 2, 1);
         rectangle(MainSc.GetSrcMain(), shipBRegion, Scalar(0, 125, 55), 2, 1);
 
-        MainSc.EndProcess();
+        
     
         key = waitKey(10); // you can change wait time
-    
+
+        if (key == 13)
+        {//пробуем свайп
+            printf("Try swipe \n");
+            printf("Button down 300:300 \n");
+            SendMessage(hwGame, WM_LBUTTONDOWN, 0, ((300) << 16) | (100));
+            Sleep(100);
+            
+            for (int z = 0; z < 100; z+=1)
+            {
+                int res = SendMessage(hwGame, WM_MOUSEMOVE, MK_LBUTTON, ((300+z) << 16) | (100+z));
+
+                printf("MOVE %i:300 \n",z+300);
+                Sleep(5);
+            }
+            printf("Button up 600:300 \n");
+            SendMessage(hwGame, WM_LBUTTONUP, 0, ((300) << 16) | 610);
+            Sleep(1000);
+
+
+        }
+    MainSc.EndProcess();
     }
     ReleaseCapture();
     destroyAllWindows();
