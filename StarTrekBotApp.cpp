@@ -43,17 +43,21 @@ int main()
 
     Mat image, imageFight, imageShipB, iMiner;
     Mat ishipZZ, ishipAtFight, ishipAim,ishipGo,ishipRepair;
+    Mat imgButtonBack;
     
     ishipZZ = imread("ShipStates\\shipZZ.png", IMREAD_UNCHANGED);
     ishipAtFight = imread("ShipStates\\shipAtFight.png", IMREAD_UNCHANGED);
     ishipAim = imread("ShipStates\\shipAim.png", IMREAD_UNCHANGED);
     ishipGo = imread("ShipStates\\shipGo.png", IMREAD_UNCHANGED);
     ishipRepair = imread("ShipStates\\shipRepair.png", IMREAD_UNCHANGED);
-
+    
+    imgButtonBack = imread("ButtonBack.png", IMREAD_UNCHANGED);
     // image = imread("issled.png", IMREAD_UNCHANGED); // Read the file
     imageFight = imread("Fight.png", IMREAD_UNCHANGED);
     imageShipB = imread("ShipB.png", IMREAD_UNCHANGED);
-    image = imread("miner.png", IMREAD_UNCHANGED);
+    image = imread("interceptor.png", IMREAD_UNCHANGED);
+    //image = imread("miner.png", IMREAD_UNCHANGED);
+    
     /*
     if (!image.data) // Check for invalid input
     {
@@ -94,10 +98,10 @@ int main()
     ship clck;
 
     Rect myROIShipsCoord;
-    myROIShipsCoord.x = windowsizeGame.right * 200 / 1395;//200
-    myROIShipsCoord.y = windowsizeGame.bottom * 160 / 784;//140
-    myROIShipsCoord.width = windowsizeGame.right * 950 / 1395;//950
-    myROIShipsCoord.height = windowsizeGame.bottom * 470 / 784;//490
+    myROIShipsCoord.x = windowsizeGame.right * 180 / 1395;//200
+    myROIShipsCoord.y = windowsizeGame.bottom * 120 / 784;//140
+    myROIShipsCoord.width = windowsizeGame.right * 970 / 1395;//950
+    myROIShipsCoord.height = windowsizeGame.bottom * 490 / 784;//490
 
     Rect shipBRegion;
     shipBRegion.x = windowsizeGame.right * 530 / 1290;
@@ -109,10 +113,17 @@ int main()
     ShipStates ShipBState;//тут будем хранить текущее состояние корабля
     ShipBState = shSleep;
 
+    Rect ButtonBackRectangle;
+    Mat ButtonBackRegion;
+
     while (key != 27)
     {
         MainSc.StartProcess();
+        
         ShipB = MainSc.GetSrcMain()(shipBRegion);
+        ButtonBackRegion = MainSc.GetSrcMain()(ButtonBackRectangle);
+
+
         if (isImageFound(ShipB, ishipZZ)) //
             ShipBState = shSleep;
         else 
@@ -134,7 +145,20 @@ int main()
                             currState = WaitRepair;
                         }
                         else
-                            ShipBState = shSleep;
+                        {//Если не нашли статус корабля, надо проверить что мы не ушли с главного экрана
+                            int tmpX=0, tmpY=0;
+                            printf("Check may be we exit from main screen...");
+                            if (MainSc.findImageCoord(imgButtonBack, tmpX, tmpY))
+                             {
+                                printf("Yes, exit. Click BACK \n");
+                                SendMessage(hwGame, WM_LBUTTONDOWN, 0, ((tmpY) << 16) | (tmpX));
+                                Sleep(10);
+                                SendMessage(hwGame, WM_LBUTTONUP, 0, ((tmpY) << 16) | tmpX);
+                                Sleep(100);
+                                ShipBState = shFight; // статус бой, чтобы бот ничего не делал дальше
+                             }
+                            
+                        }
         switch (ShipBState)
         {
         case shSleep:
@@ -161,7 +185,13 @@ int main()
         case findShip:
 
 
-            if (ShipBState != shSleep) break; //если корабль занят то не лезем к нему
+            if (ShipBState != shSleep)
+            {
+                printf("Ship at work. Wait 1 sec. \n");
+                Sleep(1000);
+                break; //если корабль занят то не лезем к нему
+            }
+
             printf("Search ships... \n");
             MainSc.FindShip(image, myROIShipsCoord);//Находим все корабли
             if (MainSc.GetCount() < 1)
@@ -281,6 +311,20 @@ int main()
         MainSc.EndProcess();
     
         key = waitKey(10); // you can change wait time
+
+        if (key == 13)
+        {
+            
+            key = 0;
+
+            while (key != 13)
+            {
+                printf("Paused!\n");
+                key = waitKey(1000);
+                if (key == 13) break;
+            }
+            
+        }
     
     }
     ReleaseCapture();
